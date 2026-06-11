@@ -2,7 +2,7 @@ export type NotificationData = {
     id: string;
     patientId: string;
     message: string;
-    timestamp: Date;
+    timestamp: string; // ISO string
     type: string;
     severity: string;
     status: string;
@@ -18,7 +18,7 @@ export type PatientData = {
 }
 export type ActionData = {
     action:string;
-    timestamp: string; //ISO string
+    timestamp: string; // ISO string
     report: string;
     doctor_name: string
 }

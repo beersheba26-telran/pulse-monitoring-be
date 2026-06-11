@@ -74,10 +74,34 @@ async function loadSecretObject(): Promise<SecretObject> {
 	return parseSecretObject(rawSecret);
 }
 
+function normalizePostgreSQLUri(uri: string): string {
+	try {
+		new URL(uri);
+		return uri;
+	} catch {
+		const match = uri.match(/^(postgres(?:ql)?:\/\/)([^:/?#]+):([^@]*)@(.+)$/i);
+		if (!match) {
+			throw new Error("Invalid PostgreSQL URI format.");
+		}
+
+		const [, scheme, username, rawPassword, rest] = match;
+		let decodedPassword = rawPassword;
+		try {
+			decodedPassword = decodeURIComponent(rawPassword);
+		} catch {
+			decodedPassword = rawPassword;
+		}
+
+		const encodedPassword = encodeURIComponent(decodedPassword);
+		const normalized = `${scheme}${username}:${encodedPassword}@${rest}`;
+		new URL(normalized);
+		return normalized;
+	}
+}
+
 export async function getSecretValueByKey(secretKey: string): Promise<string> {
 	const secret = await loadSecretObject();
 	const value = secret[secretKey];
-
 	if (!value || !value.trim()) {
 		throw new Error(`Secret key '${secretKey}' is missing or empty.`);
 	}
@@ -86,7 +110,8 @@ export async function getSecretValueByKey(secretKey: string): Promise<string> {
 }
 
 export async function getPostgreSQLUri(): Promise<string> {
-	return getSecretValueByKey(SECRET_KEYS.postgresqlUri);
+	const uri = await getSecretValueByKey(SECRET_KEYS.postgresqlUri);
+	return normalizePostgreSQLUri(uri);
 }
 
 export async function getMongoUri(): Promise<string> {
