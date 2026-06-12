@@ -247,24 +247,34 @@ class ApiServiceImpl implements ApiService {
     async addActionToNotification(notificationId: string, action: ActionData): Promise<void> {
         const db = await getKnexClient();
 
-        const doctors = await db("doctors")
-            .select("id")
-            .where("name", action.doctor_name);
+        await db.transaction(async (trx) => {
+            const doctors = await trx<{ id: string }>("doctors")
+                .select("id")
+                .where("name", action.doctor_name);
 
-        if (doctors.length === 0) {
-            throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
-        }
+            if (doctors.length === 0) {
+                throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
+            }
 
-        if (doctors.length > 1) {
-            throw new Error(`Multiple doctors found for name '${action.doctor_name}'.`);
-        }
+            if (doctors.length > 1) {
+                throw new Error(`Multiple doctors found for name '${action.doctor_name}'.`);
+            }
 
-        await db("notifications_history").insert({
-            notification_id: notificationId,
-            doctor_id: doctors[0].id,
-            actuion_type: action.action,
-            action_description: action.report,
-            action_date: action.timestamp,
+            const updatedRows = await trx("notifications")
+                .where("id", notificationId)
+                .update({ status: action.action });
+
+            if (updatedRows === 0) {
+                throw new Error(`Notification '${notificationId}' was not found.`);
+            }
+
+            await trx("notifications_history").insert({
+                notification_id: notificationId,
+                doctor_id: doctors[0].id,
+                actuion_type: action.action,
+                action_description: action.report,
+                action_date: action.timestamp,
+            });
         });
     }
 }
