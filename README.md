@@ -13,7 +13,7 @@
 - returns JSON presentation of array of objects NotificationData related to the patient (sorted by  timestamp in descending order)
 #### GET /notifications/history/:notification_id
 -  returns JSON presentation of array of objects ActionData related to the notification (sorted by  timestamp in descending order)
-#### POST /notifications/history 
+#### POST /notifications/history/:otification_id 
 - takes body as object of ActionData (No validation is required at this step)
 - returns nothing
 ## Sanity test using Postman
