@@ -250,7 +250,7 @@ class ApiServiceImpl implements ApiService {
         await db.transaction(async (trx) => {
             const doctors = await trx<{ id: string }>("doctors")
                 .select("id")
-                .where("name", action.doctor_name);
+                .where("id", action.doctor_name);
 
             if (doctors.length === 0) {
                 throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
