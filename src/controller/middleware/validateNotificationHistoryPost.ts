@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
+import HttpError from '../errors/HttpError';
 
 const notificationHistoryParamsSchema = z.object({
     notificationid: z.string().min(1, 'notificationid is required')
@@ -16,18 +17,12 @@ const notificationHistoryBodySchema = z.object({
 export function validateNotificationHistoryPost(req: Request, res: Response, next: NextFunction) {
     const paramsResult = notificationHistoryParamsSchema.safeParse(req.params);
     if (!paramsResult.success) {
-        return res.status(400).json({
-            error: 'Invalid route params',
-            details: paramsResult.error.flatten()
-        });
+        return next(new HttpError(400, 'Invalid route params', paramsResult.error.flatten()));
     }
 
     const bodyResult = notificationHistoryBodySchema.safeParse(req.body);
     if (!bodyResult.success) {
-        return res.status(400).json({
-            error: 'Invalid request body',
-            details: bodyResult.error.flatten()
-        });
+        return next(new HttpError(400, 'Invalid request body', bodyResult.error.flatten()));
     }
 
     req.params = paramsResult.data;

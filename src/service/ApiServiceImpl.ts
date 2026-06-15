@@ -4,6 +4,7 @@ import ApiService from "./ApiService";
 import { getMongoDbName, getMongoUri, getPostgreSQLUri, getReducedValuesCollection } from "./db_conection_parameters";
 import { knex, Knex } from "knex";
 import { MongoClient } from "mongodb";
+import HttpError from "../controller/errors/HttpError";
 const  POSTGRESQL_URI = getPostgreSQLUri();
 const MONGO_URI = getMongoUri();
 const MONGO_DB_NAME = getMongoDbName();
@@ -140,7 +141,11 @@ async function getLatestPulseValues(deviceIds: string[]): Promise<number[]> {
     return docs.map((doc) => doc.pulse_value);
 }
 
-async function buildPatientData(patientId: string): Promise<PatientData | null> {
+async function buildPatientData(patientId: string): Promise<PatientData> {
+    if (!patientId) {
+        throw new HttpError(404, "Patient not found");
+    }
+
     const db = await getKnexClient();
     const patient = await db<PatientRow>("patients")
         .select("id", "name", "birthdate", "weight", "height")
@@ -148,7 +153,7 @@ async function buildPatientData(patientId: string): Promise<PatientData | null> 
         .first();
 
     if (!patient) {
-        return null;
+        throw new HttpError(404, "Patient not found");
     }
 
     const [doctorRows, deviceRows] = await Promise.all([
@@ -224,7 +229,7 @@ class ApiServiceImpl implements ApiService {
             .first();
 
         if (!row) {
-            return null;
+            throw new HttpError(404, "Patient not found");
         }
 
         return buildPatientData(row.patientId);
@@ -262,13 +267,10 @@ class ApiServiceImpl implements ApiService {
 
             if (doctors.length === 0) {
                 logger.error(`Doctor not found for name '${action.doctor_name}'.`);
-                throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
+                throw new HttpError(404, `Doctor '${action.doctor_id}' was not found.`);
             }
 
-            if (doctors.length > 1) {
-                logger.error(`Multiple doctors found for name '${action.doctor_name}'.`);
-                throw new Error(`Multiple doctors found for name '${action.doctor_name}'.`);
-            }
+            
 
             const updatedRows = await trx("notifications")
                 .where("id", notificationId)
@@ -276,7 +278,7 @@ class ApiServiceImpl implements ApiService {
 
             if (updatedRows === 0) {
                 logger.error(`Notification '${notificationId}' was not found.`);
-                throw new Error(`Notification '${notificationId}' was not found.`);
+                throw new HttpError(404, `Notification '${notificationId}' was not found.`);
             }
 
             await trx("notifications_history").insert({
