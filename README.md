@@ -1,31 +1,29 @@
-# Initial code of back-end service with no Authorization, no Validation 
-## Fill all methods of ApiServiceImpl
-## Introduce the following API end points
-### Route "patient"
-#### GET /patient/:patientId
-- returns JSON presentation of an onbject PatientData 
-#### GET /patient/notifications/:notificationId
-- returns JSON presentation of an onbject PatientData related to a notification
-### Route "notifications"
-#### GET /notifications/doctor/:doctor_id
-- returns JSON presentation of array of objects NotificationData related to the doctor (sorted by  timestamp in descending order)
-#### GET /notifications/patient/:patient_id
-- returns JSON presentation of array of objects NotificationData related to the patient (sorted by  timestamp in descending order)
-#### GET /notifications/history/:notification_id
--  returns JSON presentation of array of objects ActionData related to the notification (sorted by  timestamp in descending order)
-#### POST /notifications/history/:otification_id 
-- takes body as object of ActionData (No validation is required at this step)
-- returns nothing
-## Sanity test using Postman
-
-# Standalone script for population of the table doctor_patient
-## There is script seed_db that creates random DB based on secret from SecretsManager service
-- the script assumes that all tables have been created by SQL script tables.sql that may be found in the root of the project
-- the script truncates all tables
-groups: 3<br>
-doctors: 10<br>
-patients: 50<br>
-devices: 50<br>
-doctor_patient rows: 59<br>
-notifications: 0<br>
-notifications_history: 0 <br>
+# Authorization on Backend
+## JWT example Structure (only required fields)
+{
+    "username": "doc_01",
+    "cognito:groups":["DOCTOR"]
+}
+## user_context midddleware function 
+### Creating user context based on JWT from header Authorization "Bearer < JWT token >"
+- using NPM package "jwt-decode"
+- if JWT is missing  additional fileds of req should be set in null
+- if JWT exists after its parsing with no any verification the middleware should add field user_id with user ID from JWT "username"  and role (either DOCTOR or PATIENT) from JWT "cognito:groups" ( see the JWT structure fro the above example)
+## auth function (its call should be passed to endpoint requiring authentication)
+### input parameter
+- takes role either "DOCTOR" or "PATIENT" or ""
+### output 
+#### returns middleware function performing following
+- if  field req.user_id is null throws 401 exception
+- if input parameter "DOCTOR" the req.role should be DOCTOR and path variable should be equaled req.user-id otherwise throws 403 exception
+- if input parameter "PATIENT" the req.role should be PATIENT and path variable should be equaled req.user-id otherwise throws 403 exception
+- if input parameter "" the req.role value isn't considered
+## updating app.ts
+- add app.use for user_context middlware
+## updating routes
+- add appropriate auth function call inside appropriate endpoints
+## Test
+### Generating two JWT using https://www.jwt.io/?utm_source=chatgpt.com and the mentioned example of JWT payload structure
+- for Doctor (for example doc_01) 
+- for Patient (for example pat_001)
+- performing tests using Postman
