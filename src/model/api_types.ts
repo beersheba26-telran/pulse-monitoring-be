@@ -20,5 +20,7 @@ export type ActionData = {
     action:string;
     timestamp: string; // ISO string
     report: string;
-    doctor_name: string
+    doctor_name: string;
+    doctor_id: string;
+
 }

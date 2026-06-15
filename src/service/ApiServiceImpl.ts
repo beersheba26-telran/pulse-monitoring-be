@@ -232,7 +232,8 @@ class ApiServiceImpl implements ApiService {
                 { action: "nh.actuion_type" },
                 { timestamp: "nh.action_date" },
                 { report: "nh.action_description" },
-                { doctor_name: "d.name" }
+                { doctor_name: "d.name" },
+                { doctor_id: "d.id" }
             )
             .orderBy("nh.action_date", "desc");
 
@@ -240,7 +241,8 @@ class ApiServiceImpl implements ApiService {
             action: row.action,
             timestamp: new Date(row.timestamp).toISOString(),
             report: row.report ?? "",
-            doctor_name: row.doctor_name ?? "",
+            doctor_name: row.doctor_name ?? "unknown name",
+            doctor_id: row.doctor_id 
         }));
     }
 
@@ -250,7 +252,7 @@ class ApiServiceImpl implements ApiService {
         await db.transaction(async (trx) => {
             const doctors = await trx<{ id: string }>("doctors")
                 .select("id")
-                .where("id", action.doctor_name);
+                .where("id", action.doctor_id);
 
             if (doctors.length === 0) {
                 throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
