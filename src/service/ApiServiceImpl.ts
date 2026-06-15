@@ -1,3 +1,4 @@
+import logger from "../logger";
 import { ActionData, NotificationData, PatientData } from "../model/api_types";
 import ApiService from "./ApiService";
 import { getMongoDbName, getMongoUri, getPostgreSQLUri, getReducedValuesCollection } from "./db_conection_parameters";
@@ -65,10 +66,11 @@ async function getKnexClient(): Promise<Knex> {
                     connection: connectionString,
                 });
             }
-
+            logger.info("PostgreSQL client initialized.");
             return knexClient;
         }).catch((error) => {
             knexClientPromise = null;
+            logger.error({ error }, "Error initializing PostgreSQL client.");
             throw error;
         });
     }
@@ -83,9 +85,13 @@ async function getMongoClient(): Promise<MongoClient> {
                 mongoClient = new MongoClient(uri);
             }
 
-            return mongoClient.connect().then(() => mongoClient as MongoClient);
+            return mongoClient.connect().then(() => {
+                logger.info("MongoDB client initialized.");
+                return mongoClient as MongoClient;
+            });
         }).catch((error) => {
             mongoClientPromise = null;
+            logger.error({ error }, "Error initializing MongoDB client.");
             throw error;
         });
     }
@@ -255,10 +261,12 @@ class ApiServiceImpl implements ApiService {
                 .where("id", action.doctor_id);
 
             if (doctors.length === 0) {
+                logger.error(`Doctor not found for name '${action.doctor_name}'.`);
                 throw new Error(`Doctor not found for name '${action.doctor_name}'.`);
             }
 
             if (doctors.length > 1) {
+                logger.error(`Multiple doctors found for name '${action.doctor_name}'.`);
                 throw new Error(`Multiple doctors found for name '${action.doctor_name}'.`);
             }
 
@@ -267,6 +275,7 @@ class ApiServiceImpl implements ApiService {
                 .update({ status: action.action });
 
             if (updatedRows === 0) {
+                logger.error(`Notification '${notificationId}' was not found.`);
                 throw new Error(`Notification '${notificationId}' was not found.`);
             }
 
