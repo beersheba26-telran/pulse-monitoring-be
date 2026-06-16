@@ -5,6 +5,6 @@ export default interface ApiService {
     getNotificationsPatient(patientId: string): Promise<NotificationData[]>;
     getPatientByPatientId(patientId: string): Promise<PatientData | null>;
     getPatientByNotificationId(notificationId: string): Promise<PatientData | null>;
-    getNotificationHistoryByNotificationId(notificationId: string): Promise<ActionData[]>;
+    getNotificationHistoryByNotificationId(notificationId: string, userId: string, role: string): Promise<ActionData[]>;
     addActionToNotification(notificationId: string, action: ActionData): Promise<void>;
 }

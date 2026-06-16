@@ -24,7 +24,7 @@ notificationsRouter.get<{ patient_id: string }>('/patient/:patient_id', auth("PA
 });
 
 notificationsRouter.get<{ notification_id: string }>('/history/:notification_id', auth(""), async (req, res) => {
-    const data = await apiService.getNotificationHistoryByNotificationId(req.params.notification_id);
+    const data = await apiService.getNotificationHistoryByNotificationId(req.params.notification_id,req.user_id!, req.role!);
     res.json(data);
 });
 

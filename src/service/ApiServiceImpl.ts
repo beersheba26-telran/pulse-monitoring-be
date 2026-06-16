@@ -25,6 +25,7 @@ type NotificationHistoryRow = {
     timestamp: Date | string;
     report: string | null;
     doctor_name: string | null;
+    doctor_id: string;
 };
 
 type PatientRow = {
@@ -235,8 +236,36 @@ class ApiServiceImpl implements ApiService {
         return buildPatientData(row.patientId);
     }
 
-    async getNotificationHistoryByNotificationId(notificationId: string): Promise<ActionData[]> {
-        const rows = await (await getKnexClient())<NotificationHistoryRow>("notifications_history as nh")
+    async getNotificationHistoryByNotificationId(notificationId: string, userId: string, role: string): Promise<ActionData[]> {
+        const db = await getKnexClient();
+
+        if (role === "PATIENT") {
+            const patientAccess = await db<{ patientId: string }>("notifications as n")
+                .innerJoin("devices as d", "d.id", "n.device_id")
+                .where("n.id", notificationId)
+                .select({ patientId: "d.patient_id" })
+                .first();
+
+            if (!patientAccess || patientAccess.patientId !== userId) {
+                throw new HttpError(403, "Forbidden: patients can access only their own notification history.");
+            }
+        } else if (role === "DOCTOR") {
+            const doctorAccess = await db<{ doctorId: string }>("notifications as n")
+                .innerJoin("devices as d", "d.id", "n.device_id")
+                .innerJoin("doctor_patient as dp", "dp.patient_id", "d.patient_id")
+                .where("n.id", notificationId)
+                .andWhere("dp.doctor_id", userId)
+                .select({ doctorId: "dp.doctor_id" })
+                .first();
+
+            if (!doctorAccess) {
+                throw new HttpError(403, "Forbidden: doctors can access only their own patients' notification history.");
+            }
+        } else {
+            throw new HttpError(403, `Forbidden: role '${role}' is not allowed.`);
+        }
+
+        const rows = await db<NotificationHistoryRow>("notifications_history as nh")
             .innerJoin("doctors as d", "d.id", "nh.doctor_id")
             .where("nh.notification_id", notificationId)
             .select(
