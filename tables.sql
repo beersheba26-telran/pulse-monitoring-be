@@ -58,3 +58,49 @@ CREATE TABLE public.notifications_history (
   CONSTRAINT notifications_history_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.doctors(id),
   CONSTRAINT notifications_history_notification_id_fkey FOREIGN KEY (notification_id) REFERENCES public.notifications(id)
 );
+
+ALTER TABLE public.notifications_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications_history FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY notifications_history_select_policy
+ON public.notifications_history
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.notifications n
+    JOIN public.devices d ON d.id = n.device_id
+    WHERE n.id = notification_id
+      AND (
+        (
+          current_setting('app.user_role', true) = 'PATIENT'
+          AND d.patient_id = current_setting('app.user_id', true)
+        )
+        OR (
+          current_setting('app.user_role', true) = 'DOCTOR'
+          AND EXISTS (
+            SELECT 1
+            FROM public.doctor_patient dp
+            WHERE dp.patient_id = d.patient_id
+              AND dp.doctor_id = current_setting('app.user_id', true)
+          )
+        )
+      )
+  )
+);
+
+CREATE POLICY notifications_history_insert_policy
+ON public.notifications_history
+FOR INSERT
+WITH CHECK (
+  current_setting('app.user_role', true) = 'DOCTOR'
+  AND doctor_id = current_setting('app.user_id', true)
+  AND EXISTS (
+    SELECT 1
+    FROM public.notifications n
+    JOIN public.devices d ON d.id = n.device_id
+    JOIN public.doctor_patient dp ON dp.patient_id = d.patient_id
+    WHERE n.id = notification_id
+      AND dp.doctor_id = current_setting('app.user_id', true)
+  )
+);
