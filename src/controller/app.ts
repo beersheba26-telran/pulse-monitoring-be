@@ -5,18 +5,21 @@ import notificationsRouter from './routes/notifications';
 import patientRouter from './routes/patient';
 import HttpError from './errors/HttpError';
 import { errorHandler } from './middleware/errorHandler';
+import { user_context } from './middleware/auth';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
-app.use('/notifications', notificationsRouter);
-app.use('/patient', patientRouter);
-
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+app.use(user_context)
+app.use('/notifications', notificationsRouter);
+app.use('/patient', patientRouter);
+
+
 app.use((_req, _res, next) => {
 	next(new HttpError(404, 'Route not found'));
 });
